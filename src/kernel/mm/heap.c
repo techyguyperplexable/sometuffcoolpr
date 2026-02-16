@@ -74,12 +74,16 @@ void* kmalloc(size_t size)
 
     current->next = new_block;
 
-    heap_end += sizeof(block_header_t) + size;
+    uint32_t new_end = heap_end + sizeof(block_header_t) + size;
 
-    if (heap_end >= KERNEL_HEAP_END)
+    if (new_end < heap_end)   // overflow check
         return NULL;
 
-    return (void*)(new_block + 1);
+    if (new_end >= KERNEL_HEAP_END)
+        return NULL;
+
+    heap_end = new_end;
+
 }
 
 

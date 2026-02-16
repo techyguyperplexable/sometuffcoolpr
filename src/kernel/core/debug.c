@@ -52,23 +52,103 @@ uint16_t debug_get_ss() {
     return val;
 }
 
-void debug_print_segments() {
-    vga_print("CS: "); print_hex16(debug_get_cs()); vga_print("\n");
-    vga_print("DS: "); print_hex16(debug_get_ds()); vga_print("\n");
-    vga_print("ES: "); print_hex16(debug_get_es()); vga_print("\n");
-    vga_print("FS: "); print_hex16(debug_get_fs()); vga_print("\n");
-    vga_print("GS: "); print_hex16(debug_get_gs()); vga_print("\n");
-    vga_print("SS: "); print_hex16(debug_get_ss()); vga_print("\n");
+uint32_t debug_get_esp()
+{
+    uint32_t val;
+    asm volatile("mov %%esp, %0" : "=r"(val));
+
+    return val;
 }
 
-void debug_panic(const char* message) {
-    vga_print_color("KERNEL PANIC: ", 0xCF);
-    vga_print_color(message, 0xCF);
+uint32_t debug_get_eflags()
+{
+    uint32_t val;
+    // asm volatile("pushf; pop %0" : "=r"(val));
+    return val; 
+}
+
+
+uint32_t debug_get_cr2()
+{
+    uint32_t val;
+    asm volatile("mov %%cr2, %0" : "=r"(val));
+    return val;
+}
+
+uint32_t debug_get_cr3()
+{
+    uint32_t val;
+    asm volatile("mov %%cr3, %0" : "=r"(val));
+    return val;
+}
+
+
+void debug_print_segments()
+{
+    vga_print("=========== CPU STATE ===========\n");
+
+    // Segment registers (2-line compact layout)
+    vga_print("Segments:\n");
+
+    vga_print("  CS: "); print_hex16(debug_get_cs());
+    vga_print("  DS: "); print_hex16(debug_get_ds());
+    vga_print("  ES: "); print_hex16(debug_get_es());
     vga_print("\n");
+
+    vga_print("  FS: "); print_hex16(debug_get_fs());
+    vga_print("  GS: "); print_hex16(debug_get_gs());
+    vga_print("  SS: "); print_hex16(debug_get_ss());
+    vga_print("\n\n");
+
+    // Stack pointer
+    vga_print("ESP: ");
+    vga_print_hex(debug_get_esp());
+    vga_print("\n");
+
+    // Flags
+    // vga_print("EFLAGS: ");
+    // vga_print_hex(debug_get_eflags());
+    // vga_print("\n");
+
+    // Paging info
+    vga_print("CR2 (Fault Addr): ");
+    vga_print_hex(debug_get_cr2());
+    vga_print("\n");
+
+    vga_print("CR3 (Page Dir):  ");
+    vga_print_hex(debug_get_cr3());
+    vga_print("\n");
+
+    vga_print("=================================\n");
+}
+
+
+
+void debug_panic(const char* message)
+{
+    asm volatile("cli");   // Disable interrupts
+
+    vga_set_color(0x4F);   // White on red 
+    vga_clear();
+
+    vga_print("========================================\n");
+    vga_set_color(0xCF); // white on red + blinking
+    vga_print("             KERNEL PANIC               \n");
+    vga_set_color(0x4F);
+    vga_print("========================================\n\n");
+
+    vga_set_color(0x4F); 
+
+    vga_print("Reason: ");
+    vga_print(message);
+    vga_print("\n\n");
+
+    vga_print("CPU Segment Registers:\n");
     debug_print_segments();
     vga_print("\n");
 
-    while (1) {
+    vga_print("System Halted.\n");
+
+    while (1)
         asm volatile("hlt");
-    }
 }

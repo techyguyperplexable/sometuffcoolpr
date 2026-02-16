@@ -37,9 +37,11 @@ void paging_init(void)
     uint32_t* first_table = (uint32_t*)pmm_alloc_frame();
 
     for (int i = 0; i < PAGE_ENTRIES; i++)
-    {
+        first_table[i] = 0;
+
+    for (int i = 1; i < PAGE_ENTRIES; i++)
         first_table[i] = (i * PAGE_SIZE) | PRESENT | WRITABLE;
-    }
+    
 
     page_directory[0] = ((uint32_t)first_table) | PRESENT | WRITABLE;
     page_tables[0] = first_table;
