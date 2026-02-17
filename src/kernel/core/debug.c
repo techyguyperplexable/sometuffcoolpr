@@ -60,13 +60,6 @@ uint32_t debug_get_esp()
     return val;
 }
 
-uint32_t debug_get_eflags()
-{
-    uint32_t val;
-    // asm volatile("pushf; pop %0" : "=r"(val));
-    return val; 
-}
-
 
 uint32_t debug_get_cr2()
 {
@@ -82,45 +75,135 @@ uint32_t debug_get_cr3()
     return val;
 }
 
+uint16_t debug_get_tr()
+{
+    uint16_t val;
+    asm volatile("str %0" : "=r"(val));
+    return val;
+}
+
+void debug_get_gdtr(uint32_t* base, uint16_t* limit)
+{
+    struct {
+        uint16_t limit;
+        uint32_t base;
+    } __attribute__((packed)) gdtr;
+
+    asm volatile("sgdt %0" : "=m"(gdtr));
+
+    *base = gdtr.base;
+    *limit = gdtr.limit;
+}
+
+void debug_get_idtr(uint32_t* base, uint16_t* limit)
+{
+    struct {
+        uint16_t limit;
+        uint32_t base;
+    } __attribute__((packed)) idtr;
+
+    asm volatile("sidt %0" : "=m"(idtr));
+
+    *base = idtr.base;
+    *limit = idtr.limit;
+}
+
+uint32_t debug_get_cr0()
+{
+    uint32_t val;
+    asm volatile("mov %%cr0, %0" : "=r"(val));
+    return val;
+}
+
+uint32_t debug_get_cr4()
+{
+    uint32_t val;
+    asm volatile("mov %%cr4, %0" : "=r"(val));
+    return val;
+}
+
+uint32_t debug_get_eflags()
+{
+    uint32_t val;
+
+    asm volatile(
+        "pushf\n\t"
+        "pop %0"
+        : "=r"(val)
+    );
+
+    return val;
+}
+
+
 
 void debug_print_segments()
 {
-    vga_print("=========== CPU STATE ===========\n");
+    vga_print("==== CPU STATE ====\n");
 
-    // Segment registers (2-line compact layout)
-    vga_print("Segments:\n");
+    uint16_t cs = debug_get_cs();
+    uint16_t ds = debug_get_ds();
+    uint16_t es = debug_get_es();
+    uint16_t fs = debug_get_fs();
+    uint16_t gs = debug_get_gs();
+    uint16_t ss = debug_get_ss();
+    uint16_t tr = debug_get_tr();
 
-    vga_print("  CS: "); print_hex16(debug_get_cs());
-    vga_print("  DS: "); print_hex16(debug_get_ds());
-    vga_print("  ES: "); print_hex16(debug_get_es());
+    uint32_t cr0 = debug_get_cr0();
+    uint32_t cr2 = debug_get_cr2();
+    uint32_t cr3 = debug_get_cr3();
+    uint32_t cr4 = debug_get_cr4();
+    uint32_t eflags = debug_get_eflags();
+    uint32_t esp = debug_get_esp();
+
+    uint32_t gdtr_base, idtr_base;
+    uint16_t gdtr_limit, idtr_limit;
+
+    debug_get_gdtr(&gdtr_base, &gdtr_limit);
+    debug_get_idtr(&idtr_base, &idtr_limit);
+
+    // Segments
+    vga_print("CS: "); print_hex16(cs);
+    vga_print(" DS: "); print_hex16(ds);
+    vga_print(" ES: "); print_hex16(es);
+    vga_print(" FS: "); print_hex16(fs);
+    vga_print(" GS: "); print_hex16(gs);
+    vga_print(" SS: "); print_hex16(ss);
+    vga_print(" TR: "); print_hex16(tr);
     vga_print("\n");
 
-    vga_print("  FS: "); print_hex16(debug_get_fs());
-    vga_print("  GS: "); print_hex16(debug_get_gs());
-    vga_print("  SS: "); print_hex16(debug_get_ss());
-    vga_print("\n\n");
-
-    // Stack pointer
-    vga_print("ESP: ");
-    vga_print_hex(debug_get_esp());
+    // Stack + Flags
+    vga_print("ESP: "); vga_print_hex(esp);
+    vga_print(" EFLAGS: "); vga_print_hex(eflags);
+    vga_print(" CPL: "); vga_print_dec(cs & 0x3);
     vga_print("\n");
 
-    // Flags
-    // vga_print("EFLAGS: ");
-    // vga_print_hex(debug_get_eflags());
-    // vga_print("\n");
-
-    // Paging info
-    vga_print("CR2 (Fault Addr): ");
-    vga_print_hex(debug_get_cr2());
+    // Control Registers
+    vga_print("CR0: "); vga_print_hex(cr0);
+    vga_print(" CR2: "); vga_print_hex(cr2);
+    vga_print(" CR3: "); vga_print_hex(cr3);
+    vga_print(" CR4: "); vga_print_hex(cr4);
     vga_print("\n");
 
-    vga_print("CR3 (Page Dir):  ");
-    vga_print_hex(debug_get_cr3());
+    // Descriptor Tables
+    vga_print("GDTR: "); vga_print_hex(gdtr_base);
+    vga_print("/"); vga_print_hex(gdtr_limit);
+
+    vga_print(" IDTR: "); vga_print_hex(idtr_base);
+    vga_print("/"); vga_print_hex(idtr_limit);
     vga_print("\n");
 
-    vga_print("=================================\n");
+    // Mode flags (super compact)
+    vga_print("PM:");
+    vga_print((cr0 & 0x1) ? "1 " : "0 ");
+
+    vga_print("PG:");
+    vga_print((cr0 & 0x80000000) ? "1" : "0");
+
+    vga_print("\n====================\n");
 }
+
+
 
 
 
@@ -131,11 +214,11 @@ void debug_panic(const char* message)
     vga_set_color(0x4F);   // White on red 
     vga_clear();
 
-    vga_print("========================================\n");
-    vga_set_color(0xCF); // white on red + blinking
-    vga_print("             KERNEL PANIC               \n");
+    vga_print("================================================================================\n");
+    vga_set_color(0xCF); // white on red + blinking (or bright bg on QEMU)
+    vga_print("                                 KERNEL PANIC                                   \n");
     vga_set_color(0x4F);
-    vga_print("========================================\n\n");
+    vga_print("================================================================================\n\n");
 
     vga_set_color(0x4F); 
 

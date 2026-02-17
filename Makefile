@@ -4,172 +4,55 @@ SRC_DIR   = src
 CFLAGS  = -ffreestanding -m32 -Wall -Wextra -std=gnu99 -I$(SRC_DIR)/kernel
 LDFLAGS = -m elf_i386 -T linker.ld
 
-BOOT_SRC    = $(SRC_DIR)/boot
-KERNEL_SRC  = $(SRC_DIR)/kernel
-GRUB_SRC    = $(SRC_DIR)/grub
+C_SOURCES := $(shell find $(SRC_DIR) -name "*.c")
+ASM_SOURCES := $(shell find $(SRC_DIR) -name "*.s")
 
-CORE_SRC    = $(KERNEL_SRC)/core
-DRIVER_SRC  = $(KERNEL_SRC)/drivers
-VIDEO_SRC   = $(KERNEL_SRC)/video
-MM_SRC      = $(KERNEL_SRC)/mm
-SHELL_SRC   = $(KERNEL_SRC)/shell
-LIB_SRC     = $(KERNEL_SRC)/lib
-ARCH_SRC	= $(KERNEL_SRC)/arch
-X86_SRC     = $(ARCH_SRC)/x86
-INCLUDE_SRC = $(KERNEL_SRC)/include
+C_OBJS := $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(C_SOURCES))
+ASM_OBJS := $(patsubst $(SRC_DIR)/%.s,$(BUILD_DIR)/%.o,$(ASM_SOURCES))
+
+OBJS := $(C_OBJS) $(ASM_OBJS)
 
 # =========================
-# Boot Assembly Objects
+# Main Targets
 # =========================
-BOOT_OBJS = \
-	$(BUILD_DIR)/boot.o \
-	$(BUILD_DIR)/idt_load.o \
-	$(BUILD_DIR)/isr_stubs.o \
-	$(BUILD_DIR)/isr_common_stub.o
-
-# =========================
-# Kernel C Objects
-# =========================
-KERNEL_OBJS = \
-	$(BUILD_DIR)/kernel.o \
-	$(BUILD_DIR)/boot_core.o \
-	$(BUILD_DIR)/idt.o \
-	$(BUILD_DIR)/multiboot.o \
-	$(BUILD_DIR)/debug.o \
-	$(BUILD_DIR)/time.o \
-	$(BUILD_DIR)/console.o \
-	$(BUILD_DIR)/heap.o \
-	$(BUILD_DIR)/pmm.o \
-	$(BUILD_DIR)/paging.o \
-	$(BUILD_DIR)/pic.o \
-	$(BUILD_DIR)/pit.o \
-	$(BUILD_DIR)/io.o \
-	$(BUILD_DIR)/keyboard.o \
-	$(BUILD_DIR)/vga.o \
-	$(BUILD_DIR)/status.o \
-	$(BUILD_DIR)/shell.o \
-	$(BUILD_DIR)/string.o \
-	$(BUILD_DIR)/cpuid.o \
-	$(BUILD_DIR)/system.o
-
 
 all: $(BUILD_DIR)/spatulaOS.iso
 
 .PHONY: all clean
 
-$(BUILD_DIR):
-	mkdir -p $(BUILD_DIR)
+# =========================
+# Build directories dynamically
+# =========================
 
-# =========================
-# Assembly
-# =========================
-$(BUILD_DIR)/%.o: $(BOOT_SRC)/%.s | $(BUILD_DIR)
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c
+	@mkdir -p $(dir $@)
+	gcc $(CFLAGS) -c $< -o $@
+
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.s
+	@mkdir -p $(dir $@)
 	nasm -f elf32 $< -o $@
-
-
-# =========================
-# Libraries
-# =========================
-
-$(BUILD_DIR)/string.o: $(LIB_SRC)/string.c | $(BUILD_DIR)
-	gcc $(CFLAGS) -c $< -o $@
-
-# =========================
-# Core
-# =========================
-$(BUILD_DIR)/kernel.o: $(KERNEL_SRC)/kernel.c | $(BUILD_DIR)
-	gcc $(CFLAGS) -c $< -o $@
-
-$(BUILD_DIR)/idt.o: $(CORE_SRC)/idt.c | $(BUILD_DIR)
-	gcc $(CFLAGS) -c $< -o $@
-
-$(BUILD_DIR)/debug.o: $(CORE_SRC)/debug.c | $(BUILD_DIR)
-	gcc $(CFLAGS) -c $< -o $@
-
-$(BUILD_DIR)/time.o: $(CORE_SRC)/time.c | $(BUILD_DIR)
-	gcc $(CFLAGS) -c $< -o $@
-
-$(BUILD_DIR)/console.o: $(CORE_SRC)/console.c | $(BUILD_DIR)
-	gcc $(CFLAGS) -c $< -o $@
-
-$(BUILD_DIR)/multiboot.o: $(CORE_SRC)/multiboot.c | $(BUILD_DIR)
-	gcc $(CFLAGS) -c $< -o $@
-
-$(BUILD_DIR)/status.o: $(CORE_SRC)/status.c | $(BUILD_DIR)
-	gcc $(CFLAGS) -c $< -o $@
-
-$(BUILD_DIR)/boot_core.o: $(CORE_SRC)/boot.c | $(BUILD_DIR)
-	gcc $(CFLAGS) -c $< -o $@
-
-
-# =========================
-# Memory Management
-# =========================
-$(BUILD_DIR)/heap.o: $(MM_SRC)/heap.c | $(BUILD_DIR)
-	gcc $(CFLAGS) -c $< -o $@
-
-$(BUILD_DIR)/pmm.o: $(MM_SRC)/pmm.c | $(BUILD_DIR)
-	gcc $(CFLAGS) -c $< -o $@
-
-$(BUILD_DIR)/paging.o: $(MM_SRC)/paging.c | $(BUILD_DIR)
-	gcc $(CFLAGS) -c $< -o $@
-
-# =========================
-# Drivers
-# =========================
-$(BUILD_DIR)/pic.o: $(DRIVER_SRC)/pic.c | $(BUILD_DIR)
-	gcc $(CFLAGS) -c $< -o $@
-
-$(BUILD_DIR)/pit.o: $(DRIVER_SRC)/pit.c | $(BUILD_DIR)
-	gcc $(CFLAGS) -c $< -o $@
-
-$(BUILD_DIR)/io.o: $(DRIVER_SRC)/io.c | $(BUILD_DIR)
-	gcc $(CFLAGS) -c $< -o $@
-
-$(BUILD_DIR)/keyboard.o: $(DRIVER_SRC)/keyboard.c | $(BUILD_DIR)
-	gcc $(CFLAGS) -c $< -o $@
-
-# =========================
-# Video
-# =========================
-$(BUILD_DIR)/vga.o: $(VIDEO_SRC)/vga.c | $(BUILD_DIR)
-	gcc $(CFLAGS) -c $< -o $@
-
-# =========================
-# Arch x86
-# =========================
-$(BUILD_DIR)/cpuid.o: $(X86_SRC)/cpuid.c | $(BUILD_DIR)
-	gcc $(CFLAGS) -c $< -o $@
-
-# =========================
-# Shell
-# =========================
-$(BUILD_DIR)/shell.o: $(SHELL_SRC)/shell.c | $(BUILD_DIR)
-	gcc $(CFLAGS) -c $< -o $@
-
-# =========================
-# Include
-# =========================
-$(BUILD_DIR)/system.o: $(INCLUDE_SRC)/system.c | $(BUILD_DIR)
-	gcc $(CFLAGS) -c $< -o $@
-
 
 # =========================
 # Linking
 # =========================
-$(BUILD_DIR)/kernel.bin: $(BOOT_OBJS) $(KERNEL_OBJS)
+
+$(BUILD_DIR)/kernel.bin: $(OBJS)
 	ld $(LDFLAGS) $^ -o $@
 
 # =========================
 # ISO
 # =========================
+
 $(BUILD_DIR)/spatulaOS.iso: $(BUILD_DIR)/kernel.bin
 	mkdir -p $(BUILD_DIR)/iso/boot/grub
 	cp $(BUILD_DIR)/kernel.bin $(BUILD_DIR)/iso/boot/
-	cp $(GRUB_SRC)/grub.cfg $(BUILD_DIR)/iso/boot/grub/
+	cp $(SRC_DIR)/grub/grub.cfg $(BUILD_DIR)/iso/boot/grub/
 	grub-mkrescue -o $@ $(BUILD_DIR)/iso
-	rm -f $(BUILD_DIR)/*.o
+	rm -rf $(BUILD_DIR)/iso
 
+# =========================
+# Clean
+# =========================
 
 clean:
 	rm -rf $(BUILD_DIR)

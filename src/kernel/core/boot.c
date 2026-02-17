@@ -19,6 +19,10 @@
 
 #include "video/vga.h"
 
+
+#include "arch/x86/gdt.h"
+#include "arch/x86/tss.h"
+
 #define VGA_WIDTH 80
 #define VGA_HEIGHT 25
 
@@ -125,14 +129,17 @@ void kernel_boot(uint32_t multiboot_magic, uint32_t multiboot_addr)
     }
 
 
+    status_begin("Initializing GDT");
+    gdt_init();
+    status_end_ok();
+
+    status_begin("Initializing TSS");
+    tss_init();
+    status_end_ok();
+
     status_begin("Initializing IDT");
     idt_init();
     status_end_ok();
-
-    for (int i; i < 100000000; i++)
-    {
-        // just waste time
-    }
 
     status_begin("Remapping PIC");
     pic_remap();
@@ -145,27 +152,22 @@ void kernel_boot(uint32_t multiboot_magic, uint32_t multiboot_addr)
     
     status_begin("Enabling Interrupts");
     asm volatile("sti");
-    status_loading_animation(450);
     status_end_ok();
 
     status_begin("Initializing Paging");
     paging_init();
-    status_loading_animation(750);
     status_end_ok();
 
     status_begin("Initializing Heap");
     heap_init();
-    status_loading_animation(950);
     status_end_ok();
 
     status_begin("Initializing Console");
     console_init();
-    status_loading_animation(425);
     status_end_ok();
 
     status_begin("Initializing Keyboard");
     keyboard_init();
-    status_loading_animation(370);
     status_end_ok();
 
     status_begin("Booting system");
@@ -175,9 +177,6 @@ void kernel_boot(uint32_t multiboot_magic, uint32_t multiboot_addr)
     sleep(1700);
 
     vga_clear();
-    // vga_set_color(0xC);
-    // vga_print(boot_logo);
-    // vga_set_color(0x07);
     boot_screen();
     sleep(3500);
     vga_clear();
