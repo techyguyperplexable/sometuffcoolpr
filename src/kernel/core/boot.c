@@ -78,6 +78,9 @@ void kernel_boot(uint32_t multiboot_magic, uint32_t multiboot_addr)
     keyboard_init();
     status_end_ok();
 
+    sleep(1200);
+
+    vga_clear();
     vga_set_color(0xC);
     vga_print(boot_logo);
     vga_set_color(0x07);

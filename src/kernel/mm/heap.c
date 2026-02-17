@@ -2,10 +2,6 @@
 #include "mm/vm.h"
 #include "video/vga.h"
 
-// TODO: Add tail canary safely. Requires consistent header+payload+tail layout.
-// Previous attempt broke heap invariants and caused memory corruption.
-
-
 extern uint32_t kernel_end;   // defined in linker
 
 static uint32_t heap_start;

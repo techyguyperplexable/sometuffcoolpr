@@ -27,6 +27,10 @@ static void cmd_heapval(int argc, char* argv[])
     heap_validate();
 }
 
+static void cmd_clear(int argc, char* argv[])
+{
+    vga_clear();
+}
 
 static void cmd_memdump(int argc, char* argv[])
 {
@@ -350,6 +354,7 @@ static command_t commands[] = {
     {"sysfetch", cmd_sysfetch},
     {"shutdown", cmd_shutdown},  // FIXME: Only for QEMU
     {"reboot", cmd_reboot},      // FIXME: Only for QEMU
+    {"clear", cmd_clear},
 };
 
 #define COMMAND_COUNT (sizeof(commands) / sizeof(commands[0]))
