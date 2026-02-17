@@ -145,3 +145,24 @@ void pmm_free_frame(void* frame)
     uint32_t frame_number = (uint32_t)frame / FRAME_SIZE;
     clear_frame(frame_number);
 }
+
+uint32_t pmm_get_total_frames(void)
+{
+    return total_frames;
+}
+
+uint32_t pmm_get_free_frames(void)
+{
+    uint32_t free = 0;
+
+    for (uint32_t i = 0; i < total_frames; i++)
+    {
+        uint32_t index = i / 32;
+        uint32_t bit   = i % 32;
+
+        if (!(bitmap[index] & (1 << bit)))
+            free++;
+    }
+
+    return free;
+}

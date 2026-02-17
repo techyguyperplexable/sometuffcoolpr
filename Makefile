@@ -12,6 +12,10 @@ CORE_SRC    = $(KERNEL_SRC)/core
 DRIVER_SRC  = $(KERNEL_SRC)/drivers
 VIDEO_SRC   = $(KERNEL_SRC)/video
 MM_SRC      = $(KERNEL_SRC)/mm
+SHELL_SRC   = $(KERNEL_SRC)/shell
+LIB_SRC     = $(KERNEL_SRC)/lib
+ARCH_SRC	= $(KERNEL_SRC)/arch
+X86_SRC     = $(ARCH_SRC)/x86
 
 # =========================
 # Boot Assembly Objects
@@ -41,7 +45,10 @@ KERNEL_OBJS = \
 	$(BUILD_DIR)/io.o \
 	$(BUILD_DIR)/keyboard.o \
 	$(BUILD_DIR)/vga.o \
-	$(BUILD_DIR)/status.o 
+	$(BUILD_DIR)/status.o \
+	$(BUILD_DIR)/shell.o \
+	$(BUILD_DIR)/string.o \
+	$(BUILD_DIR)/cpuid.o
 
 
 all: $(BUILD_DIR)/myos.iso
@@ -56,6 +63,14 @@ $(BUILD_DIR):
 # =========================
 $(BUILD_DIR)/%.o: $(BOOT_SRC)/%.s | $(BUILD_DIR)
 	nasm -f elf32 $< -o $@
+
+
+# =========================
+# Libraries
+# =========================
+
+$(BUILD_DIR)/string.o: $(LIB_SRC)/string.c | $(BUILD_DIR)
+	gcc $(CFLAGS) -c $< -o $@
 
 # =========================
 # Core
@@ -116,6 +131,18 @@ $(BUILD_DIR)/keyboard.o: $(DRIVER_SRC)/keyboard.c | $(BUILD_DIR)
 # Video
 # =========================
 $(BUILD_DIR)/vga.o: $(VIDEO_SRC)/vga.c | $(BUILD_DIR)
+	gcc $(CFLAGS) -c $< -o $@
+
+# =========================
+# Arch x86
+# =========================
+$(BUILD_DIR)/cpuid.o: $(X86_SRC)/cpuid.c | $(BUILD_DIR)
+	gcc $(CFLAGS) -c $< -o $@
+
+# =========================
+# Shell
+# =========================
+$(BUILD_DIR)/shell.o: $(SHELL_SRC)/shell.c | $(BUILD_DIR)
 	gcc $(CFLAGS) -c $< -o $@
 
 # =========================
