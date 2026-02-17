@@ -2,7 +2,7 @@
 #define KERNEL_STRING_H
 
 #include <stddef.h>
-
+#include <stdint.h>
 // Length
 size_t strlen(const char* str);
 
@@ -22,5 +22,6 @@ void* memset(void* dest, int value, size_t n);
 // other
 int atoi(const char* str);
 int atoi_hex(const char* str);
+char* utoa(uint32_t value, char* buffer, int base);
 
 #endif

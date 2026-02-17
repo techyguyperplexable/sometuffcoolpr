@@ -10,6 +10,7 @@
 #include "mm/pmm.h"
 #include "mm/heap.h"
 #include "include/system.h"
+#include <stdint.h>
 
 #define MAX_ARGS 8
 
@@ -19,6 +20,106 @@ static void parse_arguments(char* input, char* argv[], int* argc);
 static void* last_alloc = NULL;
 
 int mode = 0; // 0 = kernel, 1 = root, 2 = user
+
+
+static void cmd_inttoascii(int argc, char* argv[])
+{
+    if (argc < 2)
+    {
+        vga_print("Usage: inttoascii <ascii codes...>\n");
+        return;
+    }
+
+    vga_print("ASCII: ");
+
+    for (int i = 1; i < argc; i++)
+    {
+        int value = atoi(argv[i]);
+
+        if (value < 0 || value > 255)
+        {
+            vga_print("Invalid ASCII code\n");
+            return;
+        }
+
+        char c = (char)value;
+        vga_putchar(c);
+    }
+
+    vga_print("\n");
+}
+
+
+
+static void cmd_asciitoint(int argc, char* argv[])
+{
+    if (argc != 2)
+    {
+        vga_print("Usage: asciitoint <anything>\n");
+        return;
+    }
+
+    vga_print("\nASCII code: ");
+    for (int i = 0; argv[1][i] != '\0'; i++)
+    {
+        vga_print(" ");
+        vga_print_dec((int)argv[1][i]);
+    }
+
+    vga_print("\n");
+}
+
+static void cmd_calc(int argc, char* argv[])
+{
+    if (argc != 4)
+    {
+        vga_print("Usage: eval <a> <op> <b>\n");
+        return;
+    }
+
+    int a = atoi(argv[1]);
+    int b = atoi(argv[3]);
+    char op = argv[2][0];
+
+    uint32_t result = 0;
+
+    switch (op)
+    {
+        case '+': result = a + b; break;
+        case '-': result = a - b; break;
+        case '*': result = a * b; break;
+        case '/': 
+            if (b != 0)
+                result = a / b;
+            else
+                vga_print("Division by zero!\n");
+                return;
+            break;
+    }
+
+    char buf[32];
+    utoa(result, buf, 10);
+    vga_print(buf);
+    vga_print("\n");
+}
+
+static void cmd_echo(int argc, char* argv[])
+{
+    static char buffer[1024];
+    buffer[0] = '\0';
+
+    for (int i = 1; i < argc; i++)
+    {
+        if (i > 1)
+            strcat(buffer, " ");
+
+        strcat(buffer, argv[i]);
+    }
+
+    vga_print(buffer);
+    vga_print("\n");
+
+}
 
 static void cmd_heapval(int argc, char* argv[])
 {
@@ -68,7 +169,6 @@ static void cmd_memdump(int argc, char* argv[])
         vga_print_hex(val);
         vga_print(" ");
     }
-
     vga_print("\n");
 }
 
@@ -205,29 +305,72 @@ static void cmd_uptime(int argc, char* argv[])
     vga_print(" seconds\n");
 }
 
-
 static void cmd_help(int argc, char* argv[])
 {
-    (void)argc; (void)argv;
+    // No arguments → show categories overview
+    if (argc == 1)
+    {
+        vga_print("[SYS]\n");
+        vga_print(" help      sysfetch   cpuid\n");
+        vga_print(" uptime    state      panic\n");
+        vga_print(" shutdown  reboot     clear\n");
 
-    vga_print("Available commands:\n\n");
+        vga_print("\n[MEM]\n");
+        vga_print(" meminfo   heapinfo   heapval\n");
+        vga_print(" alloc     free       freelast\n");
+        vga_print(" memdump\n");
 
-    vga_print("System:\n");
-    vga_print("  help            - Show this message\n");
-    vga_print("  panic           - Trigger kernel panic\n");
-    vga_print("  state           - Print CPU state\n");
-    vga_print("  cpuid           - Print CPU info\n");
-    vga_print("  uptime          - Print OS uptime\n\n");
+        vga_print("\n[UTIL]\n");
+        vga_print(" echo      calc\n");
+        vga_print(" asciitoint inttoascii\n");
 
-    vga_print("Memory:\n");
-    vga_print("  meminfo         - Show physical memory info\n");
-    vga_print("  heapinfo        - Show heap layout\n");
-    vga_print("  heapval         - Validate heap integrity\n");
-    vga_print("  alloc <size>    - Allocate memory\n");
-    vga_print("  free <addr>     - Free memory at address\n");
-    vga_print("  freelast        - Free last allocation\n");
-    vga_print("  memdump <a> <b> - Dump memory\n");
+        return;
+    }
+
+    // SYS category
+    if (strcmp(argv[1], "sys") == 0)
+    {
+        vga_print("[SYS]\n");
+        vga_print(" help\n");
+        vga_print(" sysfetch\n");
+        vga_print(" cpuid\n");
+        vga_print(" uptime\n");
+        vga_print(" state\n");
+        vga_print(" panic <msg>\n");
+        vga_print(" shutdown\n");
+        vga_print(" reboot\n");
+        vga_print(" clear\n");
+        return;
+    }
+
+    // MEM category
+    if (strcmp(argv[1], "mem") == 0)
+    {
+        vga_print("[MEM]\n");
+        vga_print(" meminfo\n");
+        vga_print(" heapinfo\n");
+        vga_print(" heapval\n");
+        vga_print(" alloc <size>\n");
+        vga_print(" free <addr>\n");
+        vga_print(" freelast\n");
+        vga_print(" memdump <addr> <n>\n");
+        return;
+    }
+
+    // UTIL category
+    if (strcmp(argv[1], "util") == 0)
+    {
+        vga_print("[UTIL]\n");
+        vga_print(" echo <text>\n");
+        vga_print(" calc <a> <op> <b>\n");
+        vga_print(" asciitoint <text>\n");
+        vga_print(" inttoascii <nums>\n");
+        return;
+    }
+
+    vga_print("Unknown help category\n");
 }
+
 
 
 static void cmd_sysfetch(int argc, char* argv[])
@@ -241,11 +384,11 @@ static void cmd_sysfetch(int argc, char* argv[])
     uint32_t free  = pmm_get_free_frames();
     uint32_t secs  = timer_get_seconds();
 
-    vga_print_color(boot_logo, 0xC);
+    vga_print_color(boot_logo, BOOT_LOGO_COLOR);
 
-    vga_print_color("Kernel build date: ", 0xC);
+    vga_print_color("Kernel build date: ", BOOT_LOGO_COLOR);
     vga_print_color(KERNEL_BUILD_DATE, 0xC);
-    vga_print_color("\nVersion: ", 0xC);
+    vga_print_color("\nVersion: ", BOOT_LOGO_COLOR);
     vga_print_color(KERNEL_VERSION, 0xC);
 
     vga_print("\n\nCPU:        ");
@@ -355,6 +498,10 @@ static command_t commands[] = {
     {"shutdown", cmd_shutdown},  // FIXME: Only for QEMU
     {"reboot", cmd_reboot},      // FIXME: Only for QEMU
     {"clear", cmd_clear},
+    {"echo", cmd_echo},
+    {"calc", cmd_calc},
+    {"asciitoint", cmd_asciitoint},
+    {"inttoascii", cmd_inttoascii}
 };
 
 #define COMMAND_COUNT (sizeof(commands) / sizeof(commands[0]))

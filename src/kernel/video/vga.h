@@ -12,6 +12,7 @@ void vga_print_hex(uint32_t value);
 void vga_print_dec(uint32_t num);
 void vga_print_color(const char* str, unsigned char color); 
 size_t vga_get_column(void);
+void vga_set_cursor(size_t row, size_t col);
 
 
 #endif

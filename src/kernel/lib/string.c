@@ -150,3 +150,42 @@ int atoi_hex(const char* str)
     return result;
 }
 
+
+char* utoa(uint32_t value, char* buffer, int base)
+{
+    char* ptr = buffer;
+    char* ptr1 = buffer;
+    char tmp_char;
+    uint32_t tmp_value;
+
+    if (value == 0)
+    {
+        *ptr++ = '0';
+        *ptr = '\0';
+        return buffer;
+    }
+
+    while (value != 0)
+    {
+        tmp_value = value % base;
+
+        if (tmp_value < 10)
+            *ptr++ = '0' + tmp_value;
+        else
+            *ptr++ = 'A' + (tmp_value - 10);
+
+        value /= base;
+    }
+
+    *ptr-- = '\0';
+
+    // Reverse the string
+    while (ptr1 < ptr)
+    {
+        tmp_char = *ptr;
+        *ptr-- = *ptr1;
+        *ptr1++ = tmp_char;
+    }
+
+    return buffer;
+}

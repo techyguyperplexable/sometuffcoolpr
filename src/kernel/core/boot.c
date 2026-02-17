@@ -19,6 +19,84 @@
 
 #include "video/vga.h"
 
+#define VGA_WIDTH 80
+#define VGA_HEIGHT 25
+
+static size_t get_logo_width(const char* logo)
+{
+    size_t max = 0;
+    size_t current = 0;
+
+    for (size_t i = 0; logo[i]; i++)
+    {
+        if (logo[i] == '\n')
+        {
+            if (current > max)
+                max = current;
+
+            current = 0;
+        }
+        else
+        {
+            current++;
+        }
+    }
+
+    if (current > max)
+        max = current;
+
+    return max;
+}
+
+static size_t get_logo_height(const char* logo)
+{
+    size_t lines = 1;
+
+    for (size_t i = 0; logo[i]; i++)
+        if (logo[i] == '\n')
+            lines++;
+
+    return lines;
+}
+
+void boot_screen(void)
+{
+    vga_clear();
+    vga_set_color(0x1F);
+
+
+    size_t logo_width  = get_logo_width(boot_logo);
+    size_t logo_height = get_logo_height(boot_logo);
+
+    size_t start_row = (VGA_HEIGHT - logo_height) / 2;
+    size_t start_col = (VGA_WIDTH - logo_width) / 2;
+
+    size_t row = start_row;
+    size_t col = start_col;
+
+    vga_set_color(BOOT_LOGO_COLOR);
+
+    vga_set_cursor(row, col);
+
+
+    for (size_t i = 0; boot_logo[i]; i++)
+    {
+        if (boot_logo[i] == '\n')
+        {
+            row++;
+            col = start_col;
+            vga_set_cursor(row, col);
+        }
+        else
+        {
+            vga_putchar(boot_logo[i]);
+            col++;
+        }
+    }
+
+    vga_set_color(0x07);
+}
+
 void kernel_boot(uint32_t multiboot_magic, uint32_t multiboot_addr)
 {
     vga_clear();
@@ -46,9 +124,15 @@ void kernel_boot(uint32_t multiboot_magic, uint32_t multiboot_addr)
         debug_panic("PMM failed: Unknown error");
     }
 
+
     status_begin("Initializing IDT");
     idt_init();
     status_end_ok();
+
+    for (int i; i < 100000000; i++)
+    {
+        // just waste time
+    }
 
     status_begin("Remapping PIC");
     pic_remap();
@@ -58,32 +142,47 @@ void kernel_boot(uint32_t multiboot_magic, uint32_t multiboot_addr)
     pit_init(100);
     status_end_ok();
 
+    
+    status_begin("Enabling Interrupts");
+    asm volatile("sti");
+    status_loading_animation(450);
+    status_end_ok();
+
     status_begin("Initializing Paging");
     paging_init();
+    status_loading_animation(750);
     status_end_ok();
 
     status_begin("Initializing Heap");
     heap_init();
-    status_end_ok();
-
-    status_begin("Enabling Interrupts");
-    asm volatile("sti");
+    status_loading_animation(950);
     status_end_ok();
 
     status_begin("Initializing Console");
     console_init();
+    status_loading_animation(425);
     status_end_ok();
 
     status_begin("Initializing Keyboard");
     keyboard_init();
+    status_loading_animation(370);
     status_end_ok();
 
-    sleep(1200);
+    status_begin("Booting system");
+    status_loading_animation(823);
+    status_end_ok();
+
+    sleep(1700);
 
     vga_clear();
-    vga_set_color(0xC);
-    vga_print(boot_logo);
-    vga_set_color(0x07);
+    // vga_set_color(0xC);
+    // vga_print(boot_logo);
+    // vga_set_color(0x07);
+    boot_screen();
+    sleep(3500);
+    vga_clear();
 
+    vga_print_color(boot_logo, BOOT_LOGO_COLOR);
 
 }
+

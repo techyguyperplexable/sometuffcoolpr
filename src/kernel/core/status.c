@@ -1,5 +1,7 @@
 #include "status.h"
 #include "video/vga.h"
+#include "core/time.h"
+
 
 #define COLOR_DEFAULT 0x07
 #define COLOR_GREEN   0x0A
@@ -7,6 +9,31 @@
 // #define COLOR_YELLOW  0x0E
 
 #define STATUS_COLUMN 60
+
+void status_loading_animation(uint32_t duration_ms)
+{
+    size_t current = vga_get_column();
+
+    if (current >= STATUS_COLUMN)
+        return;
+
+    size_t dots = STATUS_COLUMN - current;
+
+    if (dots == 0)
+        return;
+
+    uint32_t delay = duration_ms / dots;
+
+    if (delay == 0)
+        delay = 1;
+
+    for (size_t i = 0; i < dots; i++)
+    {
+        vga_print(".");
+        sleep(delay);
+    }
+}
+
 
 
 static void status_align(void)

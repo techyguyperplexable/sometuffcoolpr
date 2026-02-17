@@ -19,6 +19,15 @@ void vga_set_color(uint8_t color)
     terminal_color = color;
 }
 
+void vga_set_cursor(size_t row, size_t col)
+{
+    if (row < VGA_HEIGHT)
+        terminal_row = row;
+
+    if (col < VGA_WIDTH)
+        terminal_column = col;
+}
+
 
 void vga_scroll()
 {
