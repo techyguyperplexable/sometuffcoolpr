@@ -9,3 +9,8 @@ uint8_t inb(uint16_t port) {
     asm volatile ("inb %1, %0" : "=a"(ret) : "Nd"(port));
     return ret;
 }
+
+void outw(uint16_t port, uint16_t value)
+{
+    asm volatile("outw %0, %1" : : "a"(value), "Nd"(port));
+}

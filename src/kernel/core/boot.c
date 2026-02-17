@@ -5,6 +5,7 @@
 #include "core/console.h"
 #include "core/multiboot.h"
 #include "core/status.h"
+#include "time.h"
 
 #include "drivers/pic.h"
 #include "drivers/pit.h"
@@ -14,12 +15,15 @@
 #include "mm/paging.h"
 #include "mm/pmm.h"
 
+#include "include/system.h"
+
 #include "video/vga.h"
 
 void kernel_boot(uint32_t multiboot_magic, uint32_t multiboot_addr)
 {
     vga_clear();
-    multiboot_print_memory(multiboot_addr);
+    multiboot_print_memory(multiboot_addr);                
+
 
     status_begin("Initializing PMM");
 
@@ -73,4 +77,10 @@ void kernel_boot(uint32_t multiboot_magic, uint32_t multiboot_addr)
     status_begin("Initializing Keyboard");
     keyboard_init();
     status_end_ok();
+
+    vga_set_color(0xC);
+    vga_print(boot_logo);
+    vga_set_color(0x07);
+
+
 }

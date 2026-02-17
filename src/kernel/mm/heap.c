@@ -152,7 +152,6 @@ void* kmalloc(size_t size)
 }
 
 
-int i = 0;
 void kfree(void* ptr)
 {
     
@@ -200,9 +199,6 @@ void kfree(void* ptr)
     }
 
     block->free = 1;
-
-    vga_print_dec(i);
-    i++;
     //heap_validate();
 
     // Merge with next

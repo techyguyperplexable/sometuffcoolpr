@@ -16,6 +16,7 @@ SHELL_SRC   = $(KERNEL_SRC)/shell
 LIB_SRC     = $(KERNEL_SRC)/lib
 ARCH_SRC	= $(KERNEL_SRC)/arch
 X86_SRC     = $(ARCH_SRC)/x86
+INCLUDE_SRC = $(KERNEL_SRC)/include
 
 # =========================
 # Boot Assembly Objects
@@ -48,10 +49,11 @@ KERNEL_OBJS = \
 	$(BUILD_DIR)/status.o \
 	$(BUILD_DIR)/shell.o \
 	$(BUILD_DIR)/string.o \
-	$(BUILD_DIR)/cpuid.o
+	$(BUILD_DIR)/cpuid.o \
+	$(BUILD_DIR)/system.o
 
 
-all: $(BUILD_DIR)/myos.iso
+all: $(BUILD_DIR)/spatulaOS.iso
 
 .PHONY: all clean
 
@@ -146,6 +148,13 @@ $(BUILD_DIR)/shell.o: $(SHELL_SRC)/shell.c | $(BUILD_DIR)
 	gcc $(CFLAGS) -c $< -o $@
 
 # =========================
+# Include
+# =========================
+$(BUILD_DIR)/system.o: $(INCLUDE_SRC)/system.c | $(BUILD_DIR)
+	gcc $(CFLAGS) -c $< -o $@
+
+
+# =========================
 # Linking
 # =========================
 $(BUILD_DIR)/kernel.bin: $(BOOT_OBJS) $(KERNEL_OBJS)
@@ -154,11 +163,13 @@ $(BUILD_DIR)/kernel.bin: $(BOOT_OBJS) $(KERNEL_OBJS)
 # =========================
 # ISO
 # =========================
-$(BUILD_DIR)/myos.iso: $(BUILD_DIR)/kernel.bin
+$(BUILD_DIR)/spatulaOS.iso: $(BUILD_DIR)/kernel.bin
 	mkdir -p $(BUILD_DIR)/iso/boot/grub
 	cp $(BUILD_DIR)/kernel.bin $(BUILD_DIR)/iso/boot/
 	cp $(GRUB_SRC)/grub.cfg $(BUILD_DIR)/iso/boot/grub/
 	grub-mkrescue -o $@ $(BUILD_DIR)/iso
+	rm -f $(BUILD_DIR)/*.o
+
 
 clean:
 	rm -rf $(BUILD_DIR)
