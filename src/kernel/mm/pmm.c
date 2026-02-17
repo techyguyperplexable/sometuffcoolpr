@@ -73,7 +73,9 @@ int pmm_init(uint32_t multiboot_addr)
 
     bitmap = (uint32_t*)kernel_end_addr;
 
-    uint32_t bitmap_size = (total_frames / 32) * sizeof(uint32_t);
+    uint32_t bitmap_entries = (total_frames + 31) / 32;
+    uint32_t bitmap_size = bitmap_entries* sizeof(uint32_t);
+
 
     // Round up bitmap end to 4K 
     uint32_t bitmap_end =
