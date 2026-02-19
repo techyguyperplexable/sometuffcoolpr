@@ -11,6 +11,9 @@
 #include "mm/heap.h"
 #include "include/system.h"
 #include <stdint.h>
+#include "fs/vfs/vfs.h"
+#include "fs/fd/fd.h"
+
 
 #define MAX_ARGS 8
 
@@ -18,8 +21,200 @@ static void execute_command(char* input);
 static void parse_arguments(char* input, char* argv[], int* argc);
 
 static void* last_alloc = NULL;
+static vfs_node_t* cwd = NULL;
 
 int mode = 0; // 0 = kernel, 1 = root, 2 = user
+
+static void cmd_cd(int argc, char* argv[])
+{
+    if (argc < 2)
+    {
+        cwd = vfs_root;
+        return;
+    }
+
+    vfs_node_t* target;
+
+    // Absolute path
+    if (argv[1][0] == '/')
+        target = vfs_lookup(argv[1]);
+    else
+        target = path_resolve(cwd, argv[1]);
+
+    if (!target)
+    {
+        vga_print("Path not found\n");
+        return;
+    }
+
+    if (!(target->flags & VFS_DIR))
+    {
+        vga_print("Not a directory\n");
+        return;
+    }
+
+    cwd = target;
+}
+
+
+static void cmd_ls(int argc, char* argv[])
+{
+    vfs_node_t* dir;
+
+    if (argc >= 2)
+    {
+        // Absolute path
+        if (argv[1][0] == '/')
+            dir = vfs_lookup(argv[1]);
+        else
+            dir = path_resolve(cwd, argv[1]);
+    }
+    else
+    {
+        dir = cwd;   
+    }
+
+    if (!dir)
+    {
+        vga_print("Path not found\n");
+        return;
+    }
+
+    if (!(dir->flags & VFS_DIR))
+    {
+        vga_print("Not a directory\n");
+        return;
+    }
+
+    if (!dir->ops->list)
+    {
+        vga_print("List not supported\n");
+        return;
+    }
+
+    dir->ops->list(dir);
+}
+
+
+
+
+static void cmd_write(int argc, char* argv[])
+{
+    if (argc < 3)
+    {
+        vga_print("Usage: write <file> <text>\n");
+        return;
+    }
+
+    int fd = sys_open(argv[1]);
+
+    if (fd < 0)
+    {
+        vga_print("File not found\n");
+        return;
+    }
+
+    sys_seek(fd, 0);
+
+    for (int i = 2; i < argc; i++)
+    {
+        sys_write(fd, (uint8_t*)argv[i], strlen(argv[i]));
+
+        if (i < argc - 1)
+            sys_write(fd, (uint8_t*)" ", 1);
+    }
+
+    sys_close(fd);
+
+    vga_print("Written.\n");
+}
+
+
+static void cmd_rd(int argc, char* argv[])
+{
+    if (argc < 2)
+    {
+        vga_print("Usage: rd <file>\n");
+        return;
+    }
+
+    int fd = sys_open(argv[1]);
+
+    if (fd < 0)
+    {
+        vga_print("File not found\n");
+        return;
+    }
+
+    char buffer[256];
+    memset(buffer, 0, sizeof(buffer));
+
+    sys_seek(fd, 0);
+    int read = sys_read(fd, (uint8_t*)buffer, sizeof(buffer) - 1);
+
+    if (read > 0)
+        vga_print(buffer);
+
+    vga_print("\n");
+    sys_close(fd);
+}
+
+
+static void cmd_mk(int argc, char* argv[])
+{
+    if (argc < 2)
+    {
+        vga_print("Usage: mk <file>\n");
+        return;
+    }
+
+    if (!cwd)
+    {
+        vga_print("No working directory\n");
+        return;
+    }
+
+    if (cwd->ops->create(cwd, argv[1], VFS_FILE) != 0)
+    {
+        vga_print("Failed to create file\n");
+        return;
+    }
+
+    vga_print("File created\n");
+}
+
+
+static void cmd_mkr(int argc, char* argv[])
+{
+    if (argc < 2)
+    {
+        vga_print("Usage: mkr <file>\n");
+        return;
+    }
+
+    // Resolve /tmp
+    vfs_node_t* tmp = vfs_lookup("/tmp");
+
+    if (!tmp)
+    {
+        vga_print("/tmp not found\n");
+        return;
+    }
+
+    if (!(tmp->flags & VFS_DIR))
+    {
+        vga_print("/tmp is not a directory\n");
+        return;
+    }
+
+    if (tmp->ops->create(tmp, argv[1], VFS_FILE) != 0)
+    {
+        vga_print("Failed to create file\n");
+        return;
+    }
+
+    vga_print("RAM file created\n");
+}
 
 
 static void cmd_inttoascii(int argc, char* argv[])
@@ -406,7 +601,6 @@ static void cmd_sysfetch(int argc, char* argv[])
     vga_print(" frames used\n");
 
     vga_print("Mode:       ");
-
     if (mode == 0)
         vga_print("kernel\n");
     else if (mode == 1)
@@ -501,7 +695,13 @@ static command_t commands[] = {
     {"echo", cmd_echo},
     {"calc", cmd_calc},
     {"asciitoint", cmd_asciitoint},
-    {"inttoascii", cmd_inttoascii}
+    {"inttoascii", cmd_inttoascii},
+    {"mk", cmd_mk},
+    {"mkr", cmd_mkr},
+    {"rd", cmd_rd},
+    {"write", cmd_write},
+    {"ls", cmd_ls},
+    {"cd", cmd_cd},
 };
 
 #define COMMAND_COUNT (sizeof(commands) / sizeof(commands[0]))
@@ -509,6 +709,7 @@ static command_t commands[] = {
 
 void shell_init(void)
 {
+    cwd = vfs_root;
     if (mode == 0)
     {
         vga_print_color("kernel", 0xC);

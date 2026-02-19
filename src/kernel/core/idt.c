@@ -5,9 +5,6 @@
 #include "time.h"
 
 #include "video/vga.h"
-
-int z = 0;
-
 #define IDT_ENTRIES 256
 
 static const char* exception_messages[32] = {
@@ -76,9 +73,6 @@ void isr_handler(uint32_t interrupt_number, uint32_t error_code)
 
                     map_page(aligned_addr, (uint32_t)frame);
                     asm volatile("invlpg (%0)" :: "r"(aligned_addr) : "memory");
-                    vga_print_dec(z);
-                    vga_print(". Demand paging allocated frame\n");
-                    z++;
                     return;
                 }
             }

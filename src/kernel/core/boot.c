@@ -19,6 +19,10 @@
 
 #include "video/vga.h"
 
+#include "fs/fd/fd.h"
+#include "fs/vfs/vfs.h"
+#include "fs/vfs/path.h"
+#include "fs/ramfs/ramfs.h"
 
 #include "arch/x86/gdt.h"
 #include "arch/x86/tss.h"
@@ -162,6 +166,27 @@ void kernel_boot(uint32_t multiboot_magic, uint32_t multiboot_addr)
     heap_init();
     status_end_ok();
 
+    status_begin("Initializing VFS");
+    vfs_init();
+    status_end_ok();
+
+    status_begin("Initializing FD");
+    fd_init();
+    status_end_ok();
+
+    status_begin("Initializing Root Filesystem");
+    // Create main root filesystem (RAM for now)
+    vfs_node_t* main_root = ramfs_create_instance();
+    vfs_root = main_root;
+    status_end_ok();
+
+    status_begin("Mounting /tmp as RAMFS");
+    vfs_root->ops->create(vfs_root, "tmp", VFS_DIR);
+    vfs_node_t* tmp_ramfs = ramfs_create_instance();
+    vfs_mount("/tmp", tmp_ramfs);
+    status_end_ok();
+
+
     status_begin("Initializing Console");
     console_init();
     status_end_ok();
@@ -178,7 +203,7 @@ void kernel_boot(uint32_t multiboot_magic, uint32_t multiboot_addr)
 
     vga_clear();
     boot_screen();
-    sleep(3500);
+    sleep(2200);
     vga_clear();
 
     vga_print_color(boot_logo, BOOT_LOGO_COLOR);

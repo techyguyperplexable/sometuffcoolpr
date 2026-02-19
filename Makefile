@@ -1,7 +1,10 @@
 BUILD_DIR = build
 SRC_DIR   = src
 
-CFLAGS  = -ffreestanding -m32 -Wall -Wextra -std=gnu99 -I$(SRC_DIR)/kernel
+CFLAGS = -ffreestanding -fno-builtin -nostdlib -m32 \
+         -Wall -Wextra -std=gnu99 \
+         -I$(SRC_DIR)/kernel
+
 LDFLAGS = -m elf_i386 -T linker.ld
 
 C_SOURCES := $(shell find $(SRC_DIR) -name "*.c")
