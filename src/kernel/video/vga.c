@@ -1,5 +1,5 @@
 #include "vga.h"
-
+#include "drivers/io.h"
 
 #define VGA_WIDTH 80
 #define VGA_HEIGHT 25
@@ -12,6 +12,33 @@ static unsigned short* terminal_buffer = (unsigned short*) 0xB8000;
 
 static unsigned short vga_entry(unsigned char uc, unsigned char color) {
     return (unsigned short) uc | (unsigned short) color << 8;
+}
+
+void vga_disable_cursor()
+{
+    outb(0x3D4, 0x0A);
+    outb(0x3D5, 0x20);
+}
+
+
+void vga_enable_cursor(uint8_t start, uint8_t end)
+{
+    outb(0x3D4, 0x0A);
+    outb(0x3D5, (inb(0x3D5) & 0xC0) | start);
+
+    outb(0x3D4, 0x0B);
+    outb(0x3D5, (inb(0x3D5) & 0xE0) | end);
+}
+
+static void vga_update_cursor()
+{
+    uint16_t pos = terminal_row * VGA_WIDTH + terminal_column;
+
+    outb(0x3D4, 0x0F);
+    outb(0x3D5, (uint8_t)(pos & 0xFF));
+
+    outb(0x3D4, 0x0E);
+    outb(0x3D5, (uint8_t)((pos >> 8) & 0xFF));
 }
 
 void vga_set_color(uint8_t color)
@@ -108,6 +135,7 @@ void vga_putchar(char c) {
 
         size_t index = terminal_row * VGA_WIDTH + terminal_column;
         terminal_buffer[index] = vga_entry(' ', terminal_color);
+        vga_update_cursor();
 
         return;
     }
@@ -122,9 +150,8 @@ void vga_putchar(char c) {
         terminal_column = 0;
         terminal_row++;
     }
-
     vga_scroll();
-
+    vga_update_cursor();
 }
 
 void vga_print(const char* str) 

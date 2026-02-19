@@ -25,6 +25,48 @@ static vfs_node_t* cwd = NULL;
 
 int mode = 0; // 0 = kernel, 1 = root, 2 = user
 
+static void cmd_cur(int argc, char* argv[])
+{
+    if (argc != 2)
+    {
+        vga_print("Usage: cur <0-4>\n");
+        return;
+    }
+
+    int preset = atoi(argv[1]);
+
+    switch (preset)
+    {
+        case 0:
+            vga_disable_cursor(); // hidden
+            vga_print("Cursor: disabled\n");
+            break;
+        case 1:
+            vga_enable_cursor(14, 15); // classic underline
+            vga_print("Cursor: underline\n");
+            break;
+
+        case 2:
+            vga_enable_cursor(8, 15); // half block
+            vga_print("Cursor: half block\n");
+            break;
+
+        case 3:
+            vga_enable_cursor(0, 15); // full block
+            vga_print("Cursor: full block\n");
+            break;
+
+        case 4:
+            vga_enable_cursor(15, 15); // thin line
+            vga_print("Cursor: thin line\n");
+            break;
+        default:
+            vga_print("Invalid preset (1-4)\n");
+            break;
+    }
+}
+
+
 static void cmd_cd(int argc, char* argv[])
 {
     if (argc < 2)
@@ -502,7 +544,7 @@ static void cmd_uptime(int argc, char* argv[])
 
 static void cmd_help(int argc, char* argv[])
 {
-    // No arguments → show categories overview
+    // No arguments -> show categories overview
     if (argc == 1)
     {
         vga_print("[SYS]\n");
@@ -516,13 +558,12 @@ static void cmd_help(int argc, char* argv[])
         vga_print(" memdump\n");
 
         vga_print("\n[UTIL]\n");
-        vga_print(" echo      calc\n");
+        vga_print(" echo      calc       encur\n");
         vga_print(" asciitoint inttoascii\n");
 
         return;
     }
 
-    // SYS category
     if (strcmp(argv[1], "sys") == 0)
     {
         vga_print("[SYS]\n");
@@ -538,7 +579,6 @@ static void cmd_help(int argc, char* argv[])
         return;
     }
 
-    // MEM category
     if (strcmp(argv[1], "mem") == 0)
     {
         vga_print("[MEM]\n");
@@ -552,19 +592,28 @@ static void cmd_help(int argc, char* argv[])
         return;
     }
 
-    // UTIL category
     if (strcmp(argv[1], "util") == 0)
     {
         vga_print("[UTIL]\n");
         vga_print(" echo <text>\n");
         vga_print(" calc <a> <op> <b>\n");
+        vga_print(" cur <0-4>\n");
         vga_print(" asciitoint <text>\n");
         vga_print(" inttoascii <nums>\n");
+
+        vga_print("\ncur presets:\n");
+        vga_print(" 0 - disabled\n");
+        vga_print(" 1 - underline\n");
+        vga_print(" 2 - half block\n");
+        vga_print(" 3 - full block\n");
+        vga_print(" 4 - thin line\n");
+
         return;
     }
 
     vga_print("Unknown help category\n");
 }
+
 
 
 
@@ -702,6 +751,7 @@ static command_t commands[] = {
     {"write", cmd_write},
     {"ls", cmd_ls},
     {"cd", cmd_cd},
+    {"cur", cmd_cur},
 };
 
 #define COMMAND_COUNT (sizeof(commands) / sizeof(commands[0]))

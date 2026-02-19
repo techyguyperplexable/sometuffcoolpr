@@ -205,7 +205,7 @@ void kernel_boot(uint32_t multiboot_magic, uint32_t multiboot_addr)
     boot_screen();
     sleep(2200);
     vga_clear();
-
+    vga_enable_cursor(14, 15);   // classic underline
     vga_print_color(boot_logo, BOOT_LOGO_COLOR);
 
 }

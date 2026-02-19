@@ -221,7 +221,7 @@ void kfree(void* ptr)
     (uint32_t)block->prev < heap_end &&
     block->prev->free)
     {
-        block->prev->size += sizeof(block_header_t) + block->size;
+        block->prev->size += sizeof(block_header_t) + block->size + sizeof(uint32_t);
         uint32_t* tail = (uint32_t*)((char*)(block->prev + 1) + block->prev->size);
         *tail = HEAP_MAGIC;
         block->prev->next = block->next;
